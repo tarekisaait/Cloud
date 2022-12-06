@@ -2,7 +2,7 @@
 # use:
 netbeans IDE 8.2\n
 <p align="center">
-  <img src="Cloud/images/client.png" width="350" title="hover text">
+  <img src="/images/client.png" width="350" title="hover text">
 </p>
 gp501-win32-mingw
 
