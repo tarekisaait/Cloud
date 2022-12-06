@@ -1,0 +1,12 @@
+package records;
+
+public enum EventType {
+    rename,
+    delete,
+    create,
+    modify,
+    wait,
+    stopWait,
+    sendBlocks,
+    receiveBlocks
+}

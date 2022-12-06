@@ -1,0 +1,158 @@
+package multiClientsFrames;
+
+import hash.Hashes;
+import java.io.*;
+import java.net.*;
+import java.util.HashMap;
+import javax.swing.JButton;
+import records.EventType;
+import records.FileRecord;
+import windowsListener.WatchFolder;
+
+public class ClientSendThread extends Thread {
+
+    JButton connectBtn;
+    String id;
+    Socket socket = null;
+    public static ObjectOutputStream out = null;
+    WatchFolder watchFolder;
+
+    public ClientSendThread(JButton connectBtn, WatchFolder watchFolder, String id, Socket socket) {
+        this.connectBtn = connectBtn;
+        this.watchFolder = watchFolder;
+        this.id = id;
+        this.socket = socket;
+        try {
+            out = new ObjectOutputStream(socket.getOutputStream());
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    @Override
+    public void run() {
+        try {
+            out.writeObject(this.id);
+            out.flush();
+            //System.out.println("waiting Event ..");
+            SharedData.textareaEvents.setText("waiting Event .." + "\n" + SharedData.textareaEvents.getText());
+            while (true) {
+                Thread.sleep(1);
+                if (SharedData.locker && watchFolder.folderListener.locker && watchFolder.folderListener.fileRecordsQueue.size() > 0) {
+                    FileRecord fc = watchFolder.folderListener.fileRecordsQueue.poll();
+                    //System.out.println("Send FileRecord : " + fc + "==========================");
+                    SharedData.textareaEvents.setText(fc.toMsg() + "\n" + SharedData.textareaEvents.getText());
+                    SharedData.textareaRecords.setText("Local " + fc + "\n" + SharedData.textareaRecords.getText());
+                    sendMsg(fc);
+                    //System.out.println("waiting Event ..");
+                    SharedData.textareaEvents.setText("waiting Event .." + "\n" + SharedData.textareaEvents.getText());
+                }
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            SharedData.textareaEvents.setText("Check your Internet ^_^ Or Server Offline" + "\n" + SharedData.textareaEvents.getText());
+            watchFolder.stop();
+            connectBtn.setEnabled(true);
+        }
+    }
+
+    public void sendMsg(FileRecord fc) throws Exception {
+        if (fc.getType() == EventType.rename) {
+            SharedData.textareaFiles.setText(fc.getNewName() + " renamed\n" + SharedData.textareaFiles.getText());
+            out.writeObject(fc);
+            out.flush();
+        } else if (fc.getType() == EventType.delete) {
+            SharedData.textareaFiles.setText(fc.getName() + " deleted\n" + SharedData.textareaFiles.getText());
+            out.writeObject(fc);
+            out.flush();
+        } else if (fc.getType() == EventType.create) {
+            SharedData.textareaFiles.setText(fc.getName() + " created\n" + SharedData.textareaFiles.getText());
+            out.writeObject(fc);
+            out.flush();
+            File f = new File("Cloud\\" + id + "\\" + fc.getName());
+            if (f.exists()) {
+                sendCreatedFile(f);
+            }
+        } else if (fc.getType() == EventType.modify) {
+            SharedData.textareaFiles.setText(fc.getName() + " modified\n" + SharedData.textareaFiles.getText());
+            out.writeObject(fc);
+            out.flush();
+            File f = new File("Cloud\\" + id + "\\" + fc.getName());
+            if (f.exists()) {
+                sendModifiedFile(f, fc);
+            }
+        }
+    }
+
+    public void sendCreatedFile(File file) {
+        InputStream in = null;
+        try {
+            byte[] bytes = new byte[(int) file.length()];
+            in = new FileInputStream(file);
+            in.read(bytes);
+            in.close();
+            out.writeObject(bytes);
+            out.flush();
+            //System.out.println("\nFile " + file.getName() + " synchronized");
+        } catch (Exception ex) {
+            System.err.println("sendCreatedFile : " + file.getPath());
+        }
+    }
+
+    public void sendModifiedFile(File file, FileRecord fc) {
+        InputStream in = null;
+        try {
+            byte[] bytes = new byte[(int) file.length()];
+            in = new FileInputStream(file);
+            in.read(bytes);
+            in.close();
+            if (fc.getAlgorithm().equals(SharedData.algorithm_Full)) {
+                out.writeObject(bytes);
+                out.flush();
+            } else if (fc.getAlgorithm().equals(SharedData.algorithm_My)) {
+                HashMap<Integer, String> blocksSoftHashes = Hashes.SoftSignaturesForAllBlocksAsHashMap(bytes);
+                HashMap<Integer, String> blocksHardHashes = Hashes.hardSignaturesForAllBlocksAsHashMap(bytes);
+                out.writeObject(Hashes.hardSignatureForFile(bytes));
+                out.flush();
+                out.writeObject(blocksSoftHashes);
+                out.flush();
+                out.writeObject(blocksHardHashes);
+                out.flush();
+                int blocksCount = (int) (file.length() / Hashes.BlockSize) + 1;
+                System.out.println("blocksCount : " + blocksCount);
+                int lastBlockSize = (int) (file.length() - (blocksCount - 1) * Hashes.BlockSize);
+                System.out.println("lastBlockSize : " + lastBlockSize);
+                out.writeObject(lastBlockSize);
+                out.flush();
+                String hashes = Hashes.SignaturesForAllBlocksAsString(bytes, blocksSoftHashes, blocksHardHashes);
+                SharedData.textareaBocks.setText("File : " + file.getName() + hashes + "\n" + SharedData.textareaBocks.getText());
+//                out.writeObject(bytes);
+//                out.flush();
+            } else { //SharedData.algorithm_Rsyn
+                HashMap<Integer, String> blocksSoftHashes = Hashes.SoftSignaturesForAllBlocksAsHashMap(bytes);
+                HashMap<Integer, String> blocksHardHashes = Hashes.hardSignaturesForAllBlocksAsHashMap(bytes);
+                out.writeObject(Hashes.hardSignatureForFile(bytes));
+                out.flush();
+                out.writeObject(blocksSoftHashes);
+                out.flush();
+                out.writeObject(blocksHardHashes);
+                out.flush();
+                int blocksCount = (int) (file.length() / Hashes.BlockSize) + 1;
+                System.out.println("blocksCount : " + blocksCount);
+                int lastBlockSize = (int) (file.length() - (blocksCount - 1) * Hashes.BlockSize);
+                System.out.println("lastBlockSize : " + lastBlockSize);
+                out.writeObject(lastBlockSize);
+                out.flush();
+                String hashes = Hashes.SignaturesForAllBlocksAsString(bytes, blocksSoftHashes, blocksHardHashes);
+                SharedData.textareaBocks.setText("File : " + file.getName() + hashes + "\n" + SharedData.textareaBocks.getText());
+//                out.writeObject(blocksSoftHashes);
+//                out.flush();
+//                out.writeObject(blocksHardHashes);
+//                out.flush();
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            System.err.println("IOException");
+        }
+    }
+}

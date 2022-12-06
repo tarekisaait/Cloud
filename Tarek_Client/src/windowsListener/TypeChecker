@@ -1,0 +1,24 @@
+package windowsListener;
+
+import java.io.File;
+
+/**
+ *
+ * @author ASUS
+ */
+public class TypeChecker {
+
+    public static boolean checkType(String rootPath, String fileName) {
+        File file = new File(rootPath + "\\" + fileName);
+        if (!file.isHidden()
+                && (fileName.endsWith("txt")
+                || fileName.endsWith("png")
+                || fileName.endsWith("docx")
+                || fileName.endsWith("xlsx")
+                || fileName.endsWith("rar"))) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+}

@@ -1,0 +1,62 @@
+package records;
+
+import java.io.Serializable;
+import java.util.Arrays;
+
+public class BlockRecord implements Serializable {
+
+    private static final long serialVersionUID = 6529685098267756690L;
+    private boolean found;
+    private int size;
+    private int oldIndex;
+    //private int newIndex; //key of hashMap
+    private byte[] data;
+
+    public BlockRecord(boolean found, int size, int oldIndex, byte[] data) {
+        this.found = found;
+        this.size = size;
+        this.oldIndex = oldIndex;
+        this.data = data;
+    }
+
+    public boolean isFound() {
+        return found;
+    }
+
+    public void setFound(boolean found) {
+        this.found = found;
+    }
+
+    public int getSize() {
+        return size;
+    }
+
+    public void setSize(int size) {
+        this.size = size;
+    }
+
+    public int getOldIndex() {
+        return oldIndex;
+    }
+
+    public void setOldIndex(int oldIndex) {
+        this.oldIndex = oldIndex;
+    }
+
+    public byte[] getData() {
+        return data;
+    }
+
+    public void setData(byte[] data) {
+        this.data = data;
+    }
+
+    @Override
+    public String toString() {
+        return "BlockRecord{\n" + "found=" + found
+                + ",\nsize=" + size
+                + ",\noldIndex=" + oldIndex
+                + ",\ndata=" + Arrays.toString(data) + "}\n";
+    }
+
+}

@@ -1,0 +1,38 @@
+package multiClientsFrames;
+
+import java.io.*;
+import java.net.*;
+
+public class WaitClients extends Thread {
+
+    @Override
+    public void run() {
+        //System.out.println("Server Start");
+        ServerSocket serverSocket = null;
+
+        try {
+            serverSocket = new ServerSocket(5000);
+        } catch (IOException ex) {
+            System.out.println("Can't setup server on this port number. ");
+        }
+        while (true) {
+            //System.out.println("waiting clients ..");
+            SharedData.textareaEvents.setText(SharedData.textareaEvents.getText() + "waiting clients ..\n");
+            Socket socket = null;
+            try {
+                socket = serverSocket.accept();
+                ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+                ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+                String id = (String) in.readObject();
+                ClientData client = new ClientData(id, socket, out, in);
+                //System.out.println(client.id + " start");
+                SharedData.textareaEvents.setText(SharedData.textareaEvents.getText() + client.id + " connected\n");
+                ServerFrame.clients.add(client);
+                new ServerReceiveThread(client).start();
+            } catch (Exception ex) {
+                System.out.println("Can't accept client connection. ");
+                ex.printStackTrace();
+            }
+        }
+    }
+}

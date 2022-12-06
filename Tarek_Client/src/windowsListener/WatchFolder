@@ -1,0 +1,63 @@
+package windowsListener;
+
+import net.contentobjects.jnotify.JNotify;
+import net.contentobjects.jnotify.JNotifyException;
+
+public class WatchFolder extends Thread {
+
+    public String path;
+    public FolderListener folderListener;
+    public int watchID;
+    public int mask;
+    public boolean watchSubtree = true;
+
+    public WatchFolder(String path, FolderListener folderListener) {
+        this.path = path;
+        this.folderListener = folderListener;
+        mask = JNotify.FILE_CREATED
+                | JNotify.FILE_DELETED
+                | JNotify.FILE_MODIFIED
+                | JNotify.FILE_RENAMED;
+        watchSubtree = true;
+        startWatch();
+    }
+
+    @Override
+    public void run() {
+        try {
+            loop();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public void loop() throws Exception {
+        while (true) {
+            Thread.sleep(Long.MAX_VALUE);
+        }
+    }
+
+    public void startWatch() {
+        try {
+            // add actual watch
+            watchID = JNotify.addWatch(path, mask, watchSubtree, this.folderListener);
+            //System.out.println("Start Watch Folder : " + path + " -watchID : " + watchID);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public void stopWatch() {
+        try {
+            JNotify.removeWatch(watchID);
+        } catch (JNotifyException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        FolderListener fl = new FolderListener();
+        WatchFolder w = new WatchFolder("Cloud\\client1", fl);
+        w.start();
+    }
+}

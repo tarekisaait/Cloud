@@ -1,0 +1,127 @@
+package algorithms;
+
+import hash.Hashes;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.util.HashMap;
+import records.BlockRecord;
+
+public class File1 {
+
+    public HashMap<Integer, String> serverBlocksSoftHashes = new HashMap<>();
+    public HashMap<Integer, Integer> blocksNotFound = new HashMap<>();
+    public HashMap<Integer, BlockRecord> blocksRecords = new HashMap<>();
+    public byte[] bytes;
+    public int lastBlockSize;
+
+    public String start(File file,
+            String clientFileHash,
+            int lastBlockSize1,
+            HashMap<Integer, String> clientblocksSoftHashes,
+            HashMap<Integer, String> clientblocksHardHashes) {
+        serverBlocksSoftHashes.clear();
+        blocksNotFound.clear();
+        blocksRecords.clear();
+        this.lastBlockSize = lastBlockSize1;
+        String data = "";
+        InputStream in = null;
+        try {
+            in = new FileInputStream(file);
+            bytes = new byte[(int) file.length()];
+            in.read(bytes);
+            in.close();
+
+            if (clientFileHash.equals(Hashes.hardSignatureForFile(bytes))) {
+                return null;
+            }
+            long sizebyte = (int) file.length();
+            long sizeKB = sizebyte / 1024;
+            long sizeMB = sizeKB / 1024;
+            //System.out.println("File Size = " + file.length() + "byte = " + sizeKB + "KB = " + sizeMB + "MB");
+            data += "My algorithm Start\n";
+            data += "File Size = " + file.length() + "byte = " + sizeKB + "KB = " + sizeMB + "MB\n";
+            int blockSize = Hashes.BlockSize;  // 100kb=100*1024 - 1mb=1*1024*1024
+            int blockSizebyte = blockSize;
+            int blockSizeKB = blockSizebyte / 1024;
+            int blockSizeMB = blockSizeKB / 1024;
+            //System.out.println("Block Size = " + blockSizebyte + "byte = " + blockSizeKB + "KB = " + blockSizeMB + "MB");
+            data += "Block Size = " + blockSizebyte + "byte = " + blockSizeKB + "KB = " + blockSizeMB + "MB\n";
+            int blockCount = (int) (file.length() / blockSizebyte) + 1;
+            //System.out.println("Blocks Count = " + blockCount);
+            data += "Blocks Count = " + blockCount + "\n";
+
+            long startAllTime = System.nanoTime();
+            long startCreateTime = System.nanoTime();
+
+            int i;
+            for (i = 0; i < bytes.length - blockSize; i++) {
+                serverBlocksSoftHashes.put(i, Hashes.softSignatureForBlock(bytes, i, i + blockSize - 1));
+            }
+//            for (; i < bytes.length - lastBlockSize; i++) {
+//                serverBlocksSoftHashes.put(i, Hashes.softSignatureForBlock(bytes, i, i + lastBlockSize - 1));
+//            }
+            //System.out.println(i + " : " + serverBlocksSoftHashes.get(0));
+            long createDuration = (System.nanoTime() - startCreateTime);
+
+            // search for blocks
+            long startSearchTime = System.nanoTime();
+            String softHash = "";
+            String hardHash = "";
+
+            boolean found = false;
+            int blockFoundCount = 0;
+            for (int clientkey : clientblocksSoftHashes.keySet()) {
+                softHash = clientblocksSoftHashes.get(clientkey);
+                found = false;
+                for (int serverkey : serverBlocksSoftHashes.keySet()) {
+                    if (softHash.equals(serverBlocksSoftHashes.get(serverkey))) {
+                        hardHash = Hashes.hardSignatureForBlock(bytes, serverkey, serverkey + blockSize - 1);
+                        if (clientblocksHardHashes.get(clientkey).equals(hardHash)) {
+                            found = true;
+                            serverBlocksSoftHashes.remove(serverkey);
+                            data += "block (" + clientkey + ") Found at index " + serverkey + "\n";
+                            blockFoundCount++;
+                            blocksRecords.put(clientkey, new BlockRecord(true, Hashes.BlockSize, serverkey, null));
+                            break;
+                        }
+                    }
+                }
+                if (!found) {
+                    data += "block (" + clientkey + ") Not found\n";
+                    blocksRecords.put(clientkey, new BlockRecord(false, Hashes.BlockSize, -1, null));
+                    blocksNotFound.put(clientkey, Hashes.BlockSize);
+                }
+                //break;
+            }
+            long searchDuration = (System.nanoTime() - startSearchTime);
+
+            long totalDuration = (System.nanoTime() - startAllTime);
+            final long timeBillion = 1000000000;
+            double timeSeconds = (double) createDuration / timeBillion;
+            data += "Number Of Found  Blocks : " + blockFoundCount + "\n";
+            data += "Number Of Missed Blocks : " + blocksNotFound.size() + "\n";
+
+            data += "Soft Hashes Size : " + serverBlocksSoftHashes.size() + "\n";
+            data += "duration of Create Blocks Soft Hashes\nOn Server Byte offset: " + timeSeconds + " seconds.\n";
+
+            timeSeconds = (double) searchDuration / timeBillion;
+            data += "duration of Search : " + timeSeconds + " seconds.\n";
+
+            timeSeconds = (double) totalDuration / timeBillion;
+            data += "Total duration (Create, Search): " + timeSeconds + " seconds.\n";
+
+            //add lastBlockSize
+            if (lastBlockSize != 0 && blocksNotFound.containsKey(clientblocksSoftHashes.size() - 1)) {
+                blocksNotFound.put(clientblocksSoftHashes.size() - 1, lastBlockSize);
+                blocksRecords.get(clientblocksSoftHashes.size() - 1).setSize(lastBlockSize);
+            }
+            data += "Blocks Records:\n" + blocksRecords + "\n";
+            data += "Blocks Not Found On Server:\n" + blocksNotFound + "\n";
+            data += "----------------------------------------------------";
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return data;
+    }
+}
