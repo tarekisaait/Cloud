@@ -1,7 +1,9 @@
 #  Tarek Cloud For Syn Files
 # use:
 netbeans IDE 8.2\n
-![Screenshot](images/client.png)
+<p align="center">
+  <img src="images/client.png" width="350" title="hover text">
+</p>
 gp501-win32-mingw
 
 # Jar Libraries
