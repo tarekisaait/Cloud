@@ -1,7 +1,7 @@
 #  Tarek Cloud For Syn Files
 # use:
 netbeans IDE 8.2\n
-![image](images\client.png)
+![image](images/client.png)
 gp501-win32-mingw
 
 # Jar Libraries
