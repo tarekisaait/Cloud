@@ -1,6 +1,6 @@
 #  Tarek Cloud For Syn Files
 # use:
-netbeans IDE 8.2
+netbeans IDE 8.2\n
 ![image](https://user-images.githubusercontent.com/119899435/205774765-260d36bd-7180-4bae-9a8a-8e1f12eb0ea7.png)
 gp501-win32-mingw
 
